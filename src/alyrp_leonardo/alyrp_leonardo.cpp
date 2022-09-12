@@ -31,7 +31,8 @@ bool validLrcFile;
 File lrcRootDir;
 
 // LCD display
-LiquidCrystal_I2C lcd(0x27, LCD_COLS, LCD_ROWS);
+//https://create.arduino.cc/projecthub/abdularbi17/how-to-scan-i2c-address-in-arduino-eaadda
+LiquidCrystal_I2C lcd(0x27, LCD_COLS, LCD_ROWS); //0x27   0x3f
 
 // Setup 
 void setup() {
@@ -41,9 +42,10 @@ void setup() {
 
     // LCD initialization
     lcd.init();
+    lcd.begin(LCD_COLS, LCD_ROWS);
     lcd.backlight();
     lcd.home();
-    printLcd("Lyre v.beta", 0, true);
+    printLcd("ALYRP v.beta", 0, true);
 
     // SD initialization
     if(!sd.begin(SD_CS_PIN)) {
@@ -130,7 +132,7 @@ void printError(const short errorId) {
         fatal = true;
     }  
     else if(errorId == 62) {
-        printLcd("No /lyrics/ folder!", 0, true);
+        printLcd("No LRC_DIR folder!", 0, true);
         fatal = true;
     } 
     else if(errorId == 63) {
@@ -186,7 +188,7 @@ void printLcdNav(const char navId) {
 
 /**
  * Applies regexString to targetString.
- * Returns true if regex pattern applies to string. False otherwise.
+ * Returns true if regex pattern matches to string. False otherwise.
  */
 boolean matchRegex(char *targetString, char *regexString) {
     MatchState ms;
@@ -247,13 +249,18 @@ void startKaraoke(SdFile *sdElemPtr) {
     }
     char timestampBuffer[LRC_TIMESTAMP_LENGTH + 1];
 
+    //conversion result current timestamp -> milliseconds
     unsigned long currentTime = 0;
+    //conversion result last timestamp -> milliseconds
     unsigned long lastTime = 0;
 
     //if true it means that the parser is reading a timestamp
     bool readTimestamp = true;
     //if true it means that the parser must output the read character
     bool printChar = false;
+
+    uint8_t printedChars = 0;
+    uint8_t currentLcdRow = -1;
 
     lcd.clear();
 
@@ -266,6 +273,7 @@ void startKaraoke(SdFile *sdElemPtr) {
                 //reset the timestump buffer index when the file current line length is
                 //smaller than the timestump length
                 i = 0;
+                printedChars = 0;
                 continue;
             }
 
@@ -281,8 +289,10 @@ void startKaraoke(SdFile *sdElemPtr) {
                     lastTime = currentTime;
                     
                     i = 0;
+                    printedChars = 0;
                     printChar = true;
                     lcd.clear();
+                    currentLcdRow = 0;
                 }
                 else {
                     printChar = false;
@@ -298,6 +308,11 @@ void startKaraoke(SdFile *sdElemPtr) {
             i = 0;
         }
         else if(printChar) {
+            printedChars++;
+            if(printedChars%LCD_COLS == 0) {
+                currentLcdRow++;
+                lcd.setCursor(0, currentLcdRow);
+            }
             lcd.write(c);
         }
     }
