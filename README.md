@@ -13,8 +13,8 @@ Alyrp (Arduino LYRics Player :microphone:) is a `.LRC` (and text files formatted
   - [x] CATALEX Micro SD Card Module
 
 - 1x LCD Display
-  - [x] LCD 16x2 (with I2C module)
-  - [x] LCD 20X4 (with I2C module) (recommended)
+  - [x] LCD 16x2 (w/ I2C module)
+  - [x] LCD 20x4 (w/ I2C module) (recommended)
 
 ## :electric_plug: Wiring
 See `/src/alyrp_<MICROCONTROLLER>/wiring` files.
@@ -24,7 +24,7 @@ See `/src/alyrp_<MICROCONTROLLER>/wiring` files.
 1. `git clone <REPOURL>`
 2. Install [PlatformIO IDE](https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide) extension in VS Code
 3. Open VS Code
-4. PIO Home > Projects > Add Existing > Selected downloaded folder in step 1.
+4. PIO Home > Projects > Add Existing > Select downloaded folder in step 1.
 
 ## :question: Other info
 1. SD card file hierarchy
@@ -33,10 +33,15 @@ See `/src/alyrp_<MICROCONTROLLER>/wiring` files.
        |-- song1.lrc
        |-- ...
    ```
+2. What is a LRC file? 
+
+   https://en.wikipedia.org/wiki/LRC_(file_format)
+   Note that right now, the code ignores all the tags id, including the `[offset:+/-<OFFSET>]` one.
+   
 2. How to download `.LRC` files of my favourite songs?
    
-   Take a look at https://github.com/fashni/MxLRC
+   `.LRC` file may be included with the song. It usually has the same name of the song itself. You can also take a look at https://github.com/fashni/MxLRC
+    
+4. Extended ASCII table
 
-3. Where to find the LCD address?
-
-    https://create.arduino.cc/projecthub/abdularbi17/how-to-scan-i2c-address-in-arduino-eaadda
+    https://www.ascii-code.com/
