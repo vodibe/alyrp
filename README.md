@@ -1,7 +1,7 @@
 # ALYRP
-Alyrp (Arduino LYRics Player) è un visualizzatore di file `.LRC` (o file di testo formattati come file `.LRC`) per Arduino Leonardo. Richiede una scheda SD/MicroSD e uno schermo LCD. Il codice sorgente segue la struttura di un progetto PlatformIO.
+Alyrp (Arduino LYRics Player :microphone:) is a `.LRC` (and text files formatted as `.LRC` files) viewer Arduino Leonardo compatible. It requires a SD/MicroSD card and a LCD screen. The source code design follows a PlatformIO project.
 
-## :satellite: Supported Components
+## :satellite: Tested devices
 - Microcontroller:
 
   - [x] Arduino Leonardo
@@ -22,7 +22,17 @@ See `src/alyrp_<MICROCONTROLLER>/wiring` files.
 git clone <REPOURL>
 PIO Home > Projects > Add Existing
 ```
-## :question: FAQ
-1. Dove ottenere i file `.LRC`?
+## :question: Other info
+1. SD card file hierarchy
+   ```
+   |-- lyrics
+       |-- song1.lrc
+       |-- song2.txt
+   ```
+2. How to download `.LRC` files?
    
-   https://github.com/fashni/MxLRC
+   Take a look at https://github.com/fashni/MxLRC
+
+3. Where to find the LCD address?
+
+    https://create.arduino.cc/projecthub/abdularbi17/how-to-scan-i2c-address-in-arduino-eaadda
