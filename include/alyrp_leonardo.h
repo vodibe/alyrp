@@ -1,5 +1,5 @@
-#ifndef _LYRE_LEONARDO_h
-    #define _LYRE_LEONARDO_h
+#ifndef _ALYRP_LEONARDO_h
+    #define _ALYRP_LEONARDO_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
     #include "Arduino.h"
