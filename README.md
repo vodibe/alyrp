@@ -4,9 +4,8 @@ Alyrp (Arduino LYRics Player :microphone:) is a `.LRC` (and text files formatted
 ## :satellite: Required components
 - [x] Tested
 - [ ] Not tested yet
-
+---
 - 1x Microcontroller:
-
   - [x] Arduino Leonardo
   - [ ] Arduino UNO
 
