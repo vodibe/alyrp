@@ -1,28 +1,4 @@
-#include <SPI.h>
-#include <SdFat.h>
-#include <LiquidCrystal_I2C.h>
-#include <Regexp.h>
-
-// SD constants
-#define SD_CS_PIN 10
-#define FILE_NAME_MAX_LENGTH 20
-#define LRC_DIR "/lyrics/"
-#define LRC_EXT "lrc"
-#define FILE_LINE_MAX_LENGTH 100
-#define LRC_TIMESTAMP_LENGTH 10
-
-// LCD constants
-#define LCD_ROWS 4
-#define LCD_COLS 20
-
-// LCD navigation constants (editable by the user)
-#define LCD_NAV_PREV 'z'
-#define LCD_NAV_NEXT 'x'
-#define LCD_NAV_OK 'c'
-
-// LCD navigation constants (NOT editable by the user)
-#define LCD_NAV_PREV_NEXT_OK 'k'
-#define LCD_NAV_PREV_NEXT 'i'
+#include "alyrp.h"
 
 // SD card
 SdFat sd;
@@ -37,29 +13,35 @@ bool validLrcFile;
 File lrcRootDir;
 
 // LCD display
-LiquidCrystal_I2C lcd(0x27, LCD_COLS, LCD_ROWS);
-
+#ifdef LCD_I2C_USED
+    //https://create.arduino.cc/projecthub/abdularbi17/how-to-scan-i2c-address-in-arduino-eaadda
+    LiquidCrystal_I2C lcd(0x27, LCD_COLS, LCD_ROWS); //0x27   0x3f
+#else
+    LiquidCrystal lcd(8, 7, 5, 4, 3, 2);
+#endif
 
 // Setup 
 void setup() {
     // Serial initialization
     Serial.begin(9600);
-    while (!Serial) {
-        ;
-    }
+    while (!Serial) { ; }
 
     // LCD initialization
-    lcd.init();
+    #if LCD_I2C_USED
+        lcd.init();
+    #endif
+
+    lcd.begin(LCD_COLS, LCD_ROWS);
     lcd.backlight();
     lcd.home();
-    printLcd("Lyrics-ino v.beta", 0, true);
+    printLcd("ALYRP v.beta", 0, true);
 
     // SD initialization
     if(!sd.begin(SD_CS_PIN)) {
-        printError(61, true);
+        printError(61);
     }
     if(!lrcRootDir.open(LRC_DIR, O_RDONLY) | !sd.chdir(LRC_DIR)) {
-        printError(62, true);
+        printError(62);
     }
     printLcdNav(LCD_NAV_NEXT);
 
@@ -71,100 +53,88 @@ void loop() {
     
     char inByte;
 
-    while (!Serial.available()) {
-        ;
-    }
+    while (!Serial.available()) { ; }
     inByte = Serial.read();
     if (inByte != -1 && inByte != '\r' && inByte != '\n') {
         browseDir(inByte);
     }
+    
 }
 
 /** 
- * Browses the previous/next file in the directory named in LRC_DIR.
+ * Browses the next file in the directory named in LRC_DIR.
  */
 void browseDir(const char inByte) {
     SdFile sdElem;
 
-    if (inByte == LCD_NAV_PREV) {
-        if (!openPrevious(lrcRootDir, sdElem, O_RDONLY)) {
-            printLcd("No previous files!", 1, true);
-            printLcdNav(LCD_NAV_NEXT);
-            return;
-        }
-    }
-    else if (inByte == LCD_NAV_NEXT) {
+    if (inByte == LCD_NAV_NEXT) {
         if (!sdElem.openNext(&lrcRootDir, O_RDONLY)) {
-            printLcd("No more files!", 1, true);
-            printLcdNav(LCD_NAV_PREV);
+            //end of directory: re-open it in order to browse the first file
+            lrcRootDir.close();
+            if(!lrcRootDir.open(LRC_DIR, O_RDONLY) | !sd.chdir(LRC_DIR)) {
+                printError(62);
+            }
+            printError(64);
             return;
         }
+        //next file exists: display file name
+        sdElem.getName(lrcFileName, FILE_NAME_MAX_LENGTH);
+        printLcd(lrcFileName, 0, true);
+
+        if (sdElem.isDir()) {
+            validLrcFile = false;
+            printLcd("Not a file!", 2, false);
+            printLcdNav(LCD_NAV_NEXT);
+        }
+        else {
+            validLrcFile = true;
+            printLcdNav(LCD_NAV_NEXT_OK);
+        }
+        sdElem.close();
     }
     else if (inByte == LCD_NAV_OK) {
         if (validLrcFile) {
             startKaraoke(&sdElem);
             sdElem.close();
 
+            //after playing lyrics, display the current file name
             lcd.clear();
             printLcd(lrcFileName, 0, true);
-            printLcdNav(LCD_NAV_PREV_NEXT_OK);
+            printLcdNav(LCD_NAV_NEXT_OK);
         }
         return;
     }
     else {
         return;
     }
-
-    sdElem.getName(lrcFileName, FILE_NAME_MAX_LENGTH);
-    printLcd(lrcFileName, 0, true);
-
-    if (sdElem.isDir() || strcasecmp(LRC_EXT, lrcFileName+strlen(lrcFileName)-strlen(LRC_EXT)) != 0) {
-        validLrcFile = false;
-        printLcd("Not a .lrc file!", 2, false);
-        printLcdNav(LCD_NAV_PREV_NEXT);
-    }
-    else {
-        validLrcFile = true;
-        printLcdNav(LCD_NAV_PREV_NEXT_OK);
-    }
-    sdElem.close();
 }
 
-/**
- * Given a file in a certain folder, opens the previous file with oflag flags.
- *
- * @see https://forum.arduino.cc/t/sdfat-openprevious/195910
- */
-bool openPrevious(SdBaseFile &folder, SdFile &file, uint8_t oflag) {
-    // dir size is 32.
-    uint16_t index = folder.curPosition() / 32;
-    if (index < 2)
-        return false;
-    // position to possible previous file location.
-    index -= 2;
-    do {
-        if (file.open(&folder, index, oflag))
-            return true;
-    } while (index-- > 0);
-    return false;
-}
 
 /**
- * Prints a normal or fatal error, according to the fatal flag.
- * A fatal error is an error that requires restarting the Arduino.
- * According to the errorId, prints the error description.
+ * Prints an error description, according to its unique identifier.
+ * Every error sets a fatal flag in order to need the arduino reboot.
  */
-void printError(const short errorId, boolean fatal) {
-    if     (errorId == 61)
+void printError(const short errorId) {
+    boolean fatal;
+    if     (errorId == 61) {
         printLcd("SD init failed!", 0, true);
-    else if(errorId == 62)
-        printLcd("No /lyrics/ folder!", 0, true);
-    else if(errorId == 63)
+        fatal = true;
+    }  
+    else if(errorId == 62) {
+        printLcd("No LRC_DIR folder!", 0, true);
+        fatal = true;
+    } 
+    else if(errorId == 63) {
         printLcd("Error opening file!", 0, true);
+        fatal = false;
+    }
+    else if(errorId == 64) {
+        printLcd("End of directory!", 0, true);
+        printLcdNav(LCD_NAV_NEXT);
+        fatal = false;
+    }
 
-    while (fatal) {
-        ;
-    }   
+    while (fatal) { ; }   
 }
 
 /**
@@ -187,13 +157,7 @@ void printLcd(char *string, const uint8_t lcdRow, bool clearLcd) {
 void printLcdNav(const char navId) {
     char navString[5] = "[ ] ";
 
-    if (navId == LCD_NAV_PREV) {
-        navString[1] = '<';
-        navString[3] = LCD_NAV_PREV;
-        lcd.setCursor(0, LCD_ROWS - 1);
-        lcd.print(navString);
-    }
-    else if (navId == LCD_NAV_NEXT) {
+    if (navId == LCD_NAV_NEXT) {
         navString[1] = '>';
         navString[3] = LCD_NAV_NEXT;
         lcd.setCursor(0, LCD_ROWS - 1);
@@ -202,23 +166,18 @@ void printLcdNav(const char navId) {
         }
         lcd.print(navString);
     }
-    else if (navId == LCD_NAV_PREV_NEXT_OK) {
+    else if (navId == LCD_NAV_NEXT_OK) {
         navString[1] = '*';
         navString[3] = LCD_NAV_OK;
         printLcdNav(LCD_NAV_NEXT);
-        printLcdNav(LCD_NAV_PREV);
         lcd.setCursor(LCD_COLS / 2 - strlen(navString) + 2, LCD_ROWS - 1);
         lcd.print(navString);
-    }
-    else if (navId == LCD_NAV_PREV_NEXT) {
-        printLcdNav(LCD_NAV_NEXT);
-        printLcdNav(LCD_NAV_PREV);
     }
 }
 
 /**
  * Applies regexString to targetString.
- * Returns true if regex pattern applies to string. False otherwise.
+ * Returns true if regex pattern matches to string. False otherwise.
  */
 boolean matchRegex(char *targetString, char *regexString) {
     MatchState ms;
@@ -275,36 +234,54 @@ unsigned long timestampToMillis(char *timestamp) {
  */
 void startKaraoke(SdFile *sdElemPtr) {
     if (!sdElemPtr->open(lrcFileName, O_RDONLY)) {
-        printError(63, false);
+        printError(63);
     }
+    char timestampBuffer[LRC_TIMESTAMP_LENGTH + 1];
+
+    //conversion result current timestamp -> milliseconds
+    unsigned long currentTime = 0;
+    //conversion result last timestamp -> milliseconds
+    unsigned long lastTime = 0;
+
+    //if true it means that the parser is reading a timestamp
+    bool readTimestamp = true;
+    //if true it means that the parser must output the read character
+    bool printChar = false;
+
+    uint8_t printedChars = 0;
+    uint8_t currentLcdRow = -1;
 
     lcd.clear();
 
-    char lyricsTimestamp[LRC_TIMESTAMP_LENGTH + 1];
-
-    unsigned long currentTime = 0;
-    unsigned long lastTime = 0;
-
-    bool readTimestamp = true;
-    bool printChar = false;
-    char c;
+    //timestump buffer index
     int i = 0;
-    while((c = sdElemPtr->read()) >=0) {
+    int16_t c;
+    while((c = sdElemPtr->read()) > 0) {
         if(readTimestamp) {
-            lyricsTimestamp[i] = c;
+            if(c == '\n') {
+                //reset the timestump buffer index when the file current line length is
+                //smaller than the timestump length
+                i = 0;
+                printedChars = 0;
+                continue;
+            }
+
+            timestampBuffer[i] = c;
             i++;
 
             if(i == LRC_TIMESTAMP_LENGTH) {
-                lyricsTimestamp[i]='\0';
+                timestampBuffer[LRC_TIMESTAMP_LENGTH]='\0';
 
-                if(isTimestamp(lyricsTimestamp)) {
-                    currentTime = timestampToMillis(lyricsTimestamp);
+                if(isTimestamp(timestampBuffer)) {
+                    currentTime = timestampToMillis(timestampBuffer);
                     delay(currentTime-lastTime);
                     lastTime = currentTime;
                     
-                    i=0;
+                    i = 0;
+                    printedChars = 0;
                     printChar = true;
                     lcd.clear();
+                    currentLcdRow = 0;
                 }
                 else {
                     printChar = false;
@@ -313,11 +290,18 @@ void startKaraoke(SdFile *sdElemPtr) {
             }
         }
         else if(c == '\r') {
-            sdElemPtr->read();
+            continue;
+        }
+        else if(c == '\n') {
             readTimestamp = true;
-            i=0;
+            i = 0;
         }
         else if(printChar) {
+            printedChars++;
+            if(printedChars%LCD_COLS == 0) {
+                currentLcdRow++;
+                lcd.setCursor(0, currentLcdRow);
+            }
             lcd.write(c);
         }
     }
