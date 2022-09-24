@@ -6,35 +6,47 @@ SdFat sd;
 // current LRC file name being played
 char lrcFileName[FILE_NAME_MAX_LENGTH];
 
-// true if selected file has .lrc extension, false otherwise
+// true if selected file can be read, false otherwise
 bool validLrcFile;
 
 // dir where all LRC files are stored
 File lrcRootDir;
 
 // LCD display
-#ifdef LCD_I2C_USED
-    //https://create.arduino.cc/projecthub/abdularbi17/how-to-scan-i2c-address-in-arduino-eaadda
-    LiquidCrystal_I2C lcd(0x27, LCD_COLS, LCD_ROWS); //0x27   0x3f
+#ifdef LCD_I2C_EXISTS
+    LiquidCrystal_I2C lcd(LCD_I2C_ADDR, LCD_COLS, LCD_ROWS);
 #else
-    LiquidCrystal lcd(8, 7, 5, 4, 3, 2);
+    //--- SET LCD PINOUT ---
+    LiquidCrystal lcd(8, 7, 6, 5, 4, 3);
 #endif
+
+Bounce btn1 = Bounce();
+Bounce btn2 = Bounce();
 
 // Setup 
 void setup() {
     // Serial initialization
+    /*
     Serial.begin(9600);
     while (!Serial) { ; }
+    */
+    
+    // Buttons initialization
+    btn1.attach(BTN1_PIN, INPUT);
+    btn1.interval(DEBOUNCE_DELAY);
+
+    btn2.attach(BTN2_PIN, INPUT);
+    btn2.interval(DEBOUNCE_DELAY);
 
     // LCD initialization
-    #if LCD_I2C_USED
+    #ifdef LCD_I2C_EXISTS
         lcd.init();
+    #else
+        lcd.begin(LCD_COLS, LCD_ROWS);
     #endif
-
-    lcd.begin(LCD_COLS, LCD_ROWS);
     lcd.backlight();
     lcd.home();
-    printLcd("ALYRP v.beta", 0, true);
+    printLcd("Alyrp v.beta", 0, true);
 
     // SD initialization
     if(!sd.begin(SD_CS_PIN)) {
@@ -50,15 +62,24 @@ void setup() {
 
 // Loop
 void loop() {
-    
+    /*
     char inByte;
 
     while (!Serial.available()) { ; }
     inByte = Serial.read();
     if (inByte != -1 && inByte != '\r' && inByte != '\n') {
         browseDir(inByte);
+    }*/
+
+    btn1.update();
+    btn2.update();
+   
+    if(btn1.changed() && btn1.fell()) {
+        browseDir(LCD_NAV_NEXT);
     }
-    
+    else if(btn2.changed() && btn2.fell()) {
+        browseDir(LCD_NAV_OK);
+    }
 }
 
 /** 
@@ -155,11 +176,10 @@ void printLcd(char *string, const uint8_t lcdRow, bool clearLcd) {
  * Prints the navigation symbols according to the navId.
  */
 void printLcdNav(const char navId) {
-    char navString[5] = "[ ] ";
+    char navString[4] = "[ ]";
 
     if (navId == LCD_NAV_NEXT) {
         navString[1] = '>';
-        navString[3] = LCD_NAV_NEXT;
         lcd.setCursor(0, LCD_ROWS - 1);
         for (int i = 0; i < LCD_COLS - strlen(navString); i++) {
             lcd.write(' ');
@@ -168,7 +188,6 @@ void printLcdNav(const char navId) {
     }
     else if (navId == LCD_NAV_NEXT_OK) {
         navString[1] = '*';
-        navString[3] = LCD_NAV_OK;
         printLcdNav(LCD_NAV_NEXT);
         lcd.setCursor(LCD_COLS / 2 - strlen(navString) + 2, LCD_ROWS - 1);
         lcd.print(navString);
