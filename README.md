@@ -1,5 +1,5 @@
 # Alyrp
-Alyrp (Arduino LYRics Player :microphone:) is a `.LRC` (and text files formatted as `.LRC` files) viewer for Arduino UNO and Arduino Leonardo. It requires a SD/MicroSD card and a LCD screen. The source code design follows a PlatformIO project.
+Alyrp :microphone: is a `.LRC` (and text files formatted as `.LRC` files) viewer for Arduino UNO and Arduino Leonardo. It requires a SD/MicroSD card and a LCD screen. The source code design follows a PlatformIO project.
 
 ## :satellite: Supported components
 - 1x Microcontroller:
@@ -25,7 +25,7 @@ See `/src/wiring` files. Note that [Fritzing](https://www.filehorse.com/download
 5. Open `/include/alyrp.h` file and edit the configuration at your needs. (see related comments)
 6. Switch PlatformIO project environment (last icon in VSCode status bar) 
 7. Build.
-8. Connect your Arduino.
+8. Connect your Arduino to a USB port.
 9. Upload.
 
 ## :question: Other info
@@ -42,5 +42,5 @@ See `/src/wiring` files. Note that [Fritzing](https://www.filehorse.com/download
    Note that right now, the code ignores all the ID tags, including the `[offset:+/-<OFFSET>]` one.
    
 3. How to download `.LRC` files of my favourite songs?
-   
+
    `.LRC` file may be included with the song. It usually has the same name of the song itself. You can also take a look at https://github.com/fashni/MxLRC
