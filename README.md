@@ -1,7 +1,7 @@
 # Alyrp
 Alyrp :microphone: is a `.LRC` (and text files formatted as `.LRC` files) viewer for Arduino UNO and Arduino Leonardo. It requires a SD/MicroSD card and a LCD screen. The source code design follows a PlatformIO project.
 
-## :satellite: Supported components
+## :satellite: Hardware
 - 1x Microcontroller:
   - Arduino Leonardo
   - Arduino UNO
@@ -14,7 +14,7 @@ Alyrp :microphone: is a `.LRC` (and text files formatted as `.LRC` files) viewer
   - LCD 20x4 (**recommended**)
 
 ## :electric_plug: Wiring
-See `/src/wiring` files. Note that [Fritzing](https://www.filehorse.com/download-fritzing-64/) is required in order to open `.fzz` files.
+See [src/wiring](src/wiring) files. Note that [Fritzing](https://www.filehorse.com/download-fritzing-64/) is required in order to open `.fzz` files.
 
 ## :arrow_down: Download and code uploading
 
